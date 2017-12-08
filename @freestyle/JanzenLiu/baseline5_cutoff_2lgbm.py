@@ -7,7 +7,6 @@ import numpy as np  # linear algebra
 import pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
 import math  
 import scipy
-import nltk
 import psutil  # to get process information
 import time
 import gc  # to collect garbage in the memory
@@ -15,6 +14,8 @@ import os
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.linear_model import Ridge, Lasso
 import lightgbm as lgb
+import warnings
+warnings.filterwarnings("ignore")
 
 
 # ----- utility functions -----
@@ -32,7 +33,7 @@ def get_duration_str(secs):
 # Copied from stackoverflow, to declare the specific source later
 # convert bytes to 'xx MB'/'yy GB'/etc.
 def get_size_str(num_bytes, units=None):
-    assert num_bytes>=0, "Negative size is not allowd"
+    assert num_bytes >= 0, "Negative size is not allowed"
     if not units:
         units = ['B', 'KB', 'MB', 'GB']
     return "{:.2f}{}".format(num_bytes, units[0]) if num_bytes < 1024 else get_size_str(num_bytes/1024.0, units[1:])
@@ -71,9 +72,9 @@ def run_func(func, **params):
 
 # Copied from: https://www.kaggle.com/marknagelberg/rmsle-function
 # A function to calculate Root Mean Squared Logarithmic Error (RMSLE)
-def rmsle(y, y_pred):
-    assert len(y) == len(y_pred)
-    terms_to_sum = [(math.log(y_pred[i] + 1) - math.log(y[i] + 1)) ** 2.0 for i, pred in enumerate(y_pred)]
+def rmsle(y, y_pred_):
+    assert len(y) == len(y_pred_)
+    terms_to_sum = [(math.log(y_pred_[i_] + 1) - math.log(y[i_] + 1)) ** 2.0 for i_, pred_ in enumerate(y_pred_)]
     return (sum(terms_to_sum) * (1.0/len(y))) ** 0.5
 
 
@@ -109,7 +110,6 @@ del df_train
 del df_test
 gc.collect()
 print('memory usage: ', get_memory_str())
-print('data shape: ', df_all.shape)
 
 
 # ----- fill missing values -----
@@ -128,13 +128,13 @@ run_func(fill_missing, df=df_all)
 def combine_ship_cond(row):
     return "{}_{}".format(row['shipping'], row['item_condition_id'])
 
+
 def make_comb(df):
     df['ship_cond_comb'] = df.apply(combine_ship_cond, axis=1)
 
 
 print('getting combination of shipping and item_condition_id...')
 run_func(make_comb, df=df_all)  # use _ to store redundant return
-print('data shape: ', df_all.shape)
 
 # -- get dummies --
 cols = ['shipping', 'item_condition_id', 'ship_cond_comb']
@@ -161,58 +161,15 @@ cat_map = {
         'Handmade/Housewares/Entertaining or Serving'
 }
 
-def replace_cat(df, map=cat_map):
-    df['category_name'] = df['category_name'].apply(lambda x: map[x] if x in map.keys() else x)
+
+def replace_cat(df, maps=cat_map):
+    df['category_name'] = df['category_name'].apply(lambda x: maps[x] if x in maps.keys() else x)
 
 
 print('replacing category_name...')
 run_func(replace_cat, df=df_all)
 succ = ((df_all['category_name'] == 'Electronics/Computers & Tablets/iPad/Tablet/eBook Readers').sum() == 0)
 print('replacement success: ', succ)
-
-
-# ----- extract basic statistical features from text -----
-# convert a document to [[word, word],[word, word]], each sublist is a sentence
-def tokenize(doc):
-    sents = nltk.sent_tokenize(doc)  # [str]
-    return [nltk.word_tokenize(sent) for sent in sents]  # [[str],[str]]
-
-
-def get_tokens(df, col):
-    return df[col].apply(tokenize)
-
-
-def get_sent_counts(df, col):
-    return df[col].apply(len)
-
-
-def get_word_counts(df, col):
-    return df[col].apply(lambda x: np.sum([len(words) for words in x]))
-
-
-def get_char_counts(df, col):
-    return df[col].apply(len)
-
-
-# this part waste too much time, disable it due to Kaggle time limits
-if not kaggle:
-    cols = ['name', 'brand_name', 'category_name']  # tokenizing item_description consumes too much time lol
-    cols_to_drop = []
-    for col in cols:
-        token_name = '{}_tokens'.format(col)
-        print('tokenizing {}...'.format(col))
-        df_all[token_name] = run_func(get_tokens, df=df_all, col=col)
-        print('counting sentences, words and characters of {}...'.format(col))
-        df_all['{}_num_sents'.format(col)] = run_func(get_sent_counts, df=df_all, col=token_name)
-        df_all['{}_num_words'.format(col)] = run_func(get_word_counts, df=df_all, col=token_name)
-        df_all['{}_num_chars'.format(col)] = run_func(get_char_counts, df=df_all, col=col)
-        print()
-        cols_to_drop.append(token_name)
-    
-    df_all.drop(cols_to_drop, axis=1, inplace=True)
-    gc.collect()
-    print('memory usage: ', get_memory_str())
-    print('data shape: ', df_all.shape)
 
 
 # ----- split category into levels -----
@@ -229,7 +186,8 @@ def get_levels_helper(cat):
 
 
 def get_levels(df):
-    df['num_cat_levles'], df['cat_level_0'], df['cat_level_1'], df['cat_level_2'] = zip(*df['category_name'].apply(get_levels_helper))
+    df['num_cat_levles'], df['cat_level_0'], df['cat_level_1'], df['cat_level_2'] = \
+        zip(*df['category_name'].apply(get_levels_helper))
     return df
 
 
@@ -248,21 +206,21 @@ CAT_2_CUTOFF = 8
 
 
 # cut off by threshold number
-def get_reserved_list(df, col, cutoff):
-    counts = df[col].value_counts()
-    return list(counts[counts>=cutoff].index)
+def get_reserved_list(df, col_, cutoff):
+    counts = df[col_].value_counts()
+    return list(counts[counts >= cutoff].index)
 
 
 def get_reserved_brand_list(df, cutoff=BRAND_CUTOFF):
-    return get_reserved_list(df, col='brand_name', cutoff=cutoff)
+    return get_reserved_list(df, col_='brand_name', cutoff=cutoff)
 
 
 def get_reserved_cat1_list(df, cutoff=CAT_1_CUTOFF):
-    return get_reserved_list(df, col='cat_level_1', cutoff=cutoff)
+    return get_reserved_list(df, col_='cat_level_1', cutoff=cutoff)
     
     
 def get_reserved_cat2_list(df, cutoff=CAT_2_CUTOFF):
-    return get_reserved_list(df, col='cat_level_2', cutoff=cutoff)
+    return get_reserved_list(df, col_='cat_level_2', cutoff=cutoff)
     
     
 def cut_brand_cat(df, brand_cutoff=BRAND_CUTOFF, cat1_cutoff=CAT_1_CUTOFF, cat2_cutoff=CAT_2_CUTOFF):
@@ -309,8 +267,6 @@ gc.collect()
 print("df_all size:", get_size_str(df_all.memory_usage(deep=True).sum()))
 
 
-
-
 # ----- get Bag-of-Words/Tf-Idf features for text -----
 # -- Bag-of-Words for name --
 # parameters for CountVectorizer
@@ -320,12 +276,12 @@ NAME_DTYPE = np.int8  # to save memory
 
 def get_name_bow(df, **params):
     bow_transformer = CountVectorizer(**params)
-    X = bow_transformer.fit_transform(df["name"])
-    return X
+    vec = bow_transformer.fit_transform(df["name"])  # to mute IDE warning
+    return vec
 
 
 print('getting Bag-of-Words representation of name...')
-name_bow= run_func(get_name_bow, df=df_all, min_df=NAME_MIN_DF, dtype=NAME_DTYPE)
+name_bow = run_func(get_name_bow, df=df_all, min_df=NAME_MIN_DF, dtype=NAME_DTYPE)
 print("name_bow dimension:", name_bow.shape[1])
 
 
@@ -339,13 +295,13 @@ DESC_DTYPE = np.float32  # to save memory
 
 def get_desc_tfidf(df, **params):
     tfidf_transformer = TfidfVectorizer(**params)
-    X = tfidf_transformer.fit_transform(df["item_description"])
-    return X
+    vec = tfidf_transformer.fit_transform(df["item_description"])
+    return vec
 
 
 print('getting Tf-Idf representation of item_description...')
 desc_tfidf = run_func(get_desc_tfidf, df=df_all, max_features=DESC_MAX_FEAT, ngram_range=DESC_NGRAM_RANGE,
-                        norm=DESC_NORM, dtype=DESC_DTYPE)
+                      norm=DESC_NORM, dtype=DESC_DTYPE)
 cols_to_drop = ['name', 'item_description']
 df_all.drop(cols_to_drop, axis=1, inplace=True)
 gc.collect()
@@ -354,18 +310,20 @@ gc.collect()
 # ----- prepare data for models -----
 # some data are in sparse matrix format, so we need to combine them using horizontal stack
 def get_stack_data():
-    X = scipy.sparse.hstack((df_all, 
-                             brand_dummies,
-                             cat_0_dummies,
-                             cat_1_dummies,
-                             cat_2_dummies,
-                             name_bow,
-                             desc_tfidf)).tocsr()
-    return X
+    mat = scipy.sparse.hstack(
+        (df_all,
+         brand_dummies,
+         cat_0_dummies,
+         cat_1_dummies,
+         cat_2_dummies,
+         name_bow,
+         desc_tfidf)
+    ).tocsr()
+    return mat
 
 
 print("stacking data together...")
-X = run_func(get_stack_data)
+X_stack = run_func(get_stack_data)
 print((df_all.shape, 
       brand_dummies.shape, 
       cat_0_dummies.shape, 
@@ -374,18 +332,18 @@ print((df_all.shape,
       name_bow.shape, 
       desc_tfidf.shape))
 gc.collect()
-print('final data shape:', X.shape)
+print('final data shape:', X_stack.shape)
 VALID_RATIO = 0.05
 y_sub_valid = y_train[:round(VALID_RATIO*TRAIN_SIZE)]
 y_sub_train = y_train[round(VALID_RATIO*TRAIN_SIZE):TRAIN_SIZE]
 y_log_sub_valid = y_log_train[:round(VALID_RATIO*TRAIN_SIZE)]
 y_log_sub_train = y_log_train[round(VALID_RATIO*TRAIN_SIZE):TRAIN_SIZE]
-X_valid = X[:round(VALID_RATIO*TRAIN_SIZE)]
-X_train = X[round(VALID_RATIO*TRAIN_SIZE):TRAIN_SIZE]
-X_test = X[TRAIN_SIZE:]
+X_valid = X_stack[:round(VALID_RATIO * TRAIN_SIZE)]
+X_train = X_stack[round(VALID_RATIO * TRAIN_SIZE):TRAIN_SIZE]
+X_test = X_stack[TRAIN_SIZE:]
 print("memory usage:", get_memory_str())
 print("releasing memory...")
-del X  # comment this line if you want to do cross validation
+del X_stack  # comment this line if you want to do cross validation
 gc.collect()
 print("memory usage:", get_memory_str())
 print("training subset shape:", X_train.shape)
@@ -405,16 +363,18 @@ def get_ridge(X, y, **params):
 
 print('training Ridge Regression model...')
 num_ridge = 2
+pred_ridge = 0  # to mute IDE warning
+ridge_eval = []
 for i in range(num_ridge):
     print("model #{}".format(i))
-    # todo: to introduce randomness by random subset instead of 'random_state'
+    # TODO: to introduce randomness by random subset instead of 'random_state'
     # the standard deviation of scores turned out to be 0, so seemingly 'random_state' didn't make the models different
-    ridge = run_func(get_ridge, X=X_train, y=y_log_sub_train, alpha=0.8**i, solver = 'lsqr', fit_intercept=False)
+    ridge = run_func(get_ridge, X=X_train, y=y_log_sub_train, alpha=0.8**i, solver='lsqr', fit_intercept=False)
     pred_valid = ridge.predict(X_valid)
     pred = ridge.predict(X_test).astype(np.float32)
-    pred_ridge = pred if i==0 else pred_ridge+pred
+    pred_ridge = pred if i == 0 else pred_ridge + pred
     score = rmsle(np.expm1(np.asarray(pred_valid)), y_sub_valid)
-    ridge_eval = [score] if i==0 else ridge_eval+[score]
+    ridge_eval += [score]
     del ridge, pred_valid, pred, score
     gc.collect()
 print("Ridge validation score: {:.6}(+/-{:.6})".format(np.mean(ridge_eval), np.std(ridge_eval)))
@@ -434,16 +394,17 @@ def get_lasso(X, y, **params):
 
 print('training Lasso Regression model...')
 num_lasso = 3
+pred_lasso = 0  # to mute IDE warning
+lasso_eval = []
 for i in range(num_lasso):
     print("model #{}".format(i))
-    # todo: to introduce randomness by random subset instead of 'random_state'
-    # the standard deviation of scores turned out to be 0, so seemingly 'random_state' didn't make the models different
+    # todo: to introduce randomness by random subset instead of 'alpha'
     lasso = run_func(get_lasso, X=X_train, y=y_log_sub_train, alpha=1.2**i, fit_intercept=False)
     pred_valid = lasso.predict(X_valid)
     pred = lasso.predict(X_test).astype(np.float32)
-    pred_lasso = pred if i==0 else pred_lasso+pred
+    pred_lasso = pred if i == 0 else pred_lasso + pred
     score = rmsle(np.expm1(np.asarray(pred_valid)), y_sub_valid)
-    lasso_eval = [score] if i==0 else lasso_eval+[score]
+    lasso_eval += [score]
     del lasso, pred_valid, pred, score
     gc.collect()
 print("Lasso validation score: {:.6}(+/-{:.6})".format(np.mean(lasso_eval), np.std(lasso_eval)))
@@ -462,7 +423,7 @@ d_train = lgb.Dataset(X_train, label=y_log_sub_train, max_bin=8192)
 d_valid = lgb.Dataset(X_valid, label=y_log_sub_valid, max_bin=8192)
 watchlist = [d_train, d_valid]
 
-# best accuracy
+# best accuracy, hopefully :)
 # 'learning_rate':0.75 + 'num_leaves':
 LGB_PARAMS0 = {
     'learning_rate': 0.55,
@@ -478,7 +439,7 @@ LGB_PARAMS0 = {
 }
 print('training LightGBM #0 model...')
 lgbm = run_func(get_lgbm, params=LGB_PARAMS0, train_set=d_train, num_boost_round=8000, valid_sets=watchlist, 
-                  early_stopping_rounds=50, verbose_eval=100)
+                early_stopping_rounds=50, verbose_eval=100)
 pred_valid = lgbm.predict(X_valid)
 pred_lgbm0 = lgbm.predict(X_test).astype(np.float32)
 lgb_eval = rmsle(np.expm1(np.asarray(pred_valid)), y_sub_valid)
@@ -488,14 +449,12 @@ del pred_valid
 gc.collect()
 
 
-# to avoid overfitting
+# to avoid overfitting, hopefully :)
 LGB_PARAMS1 = {
     'learning_rate': 0.85,  # to speed up
     'application': 'regression',
     'max_depth': 3,
     'num_leaves': 90,  # 80 seems a bit small
-    # 'feature_fraction': 0.7,
-    # 'colsample_bytree': 0.9,
     'lambda_l2': 0.2,  # to reduce overfitting
     'verbosity': -1,
     'metric': 'RMSE',
@@ -503,7 +462,7 @@ LGB_PARAMS1 = {
 }
 print('training LightGBM #1 model...')
 lgbm = run_func(get_lgbm, params=LGB_PARAMS1, train_set=d_train, num_boost_round=8000, valid_sets=watchlist, 
-                  early_stopping_rounds=50, verbose_eval=100)
+                early_stopping_rounds=50, verbose_eval=100)
 pred_valid = lgbm.predict(X_valid)
 pred_lgbm1 = lgbm.predict(X_test).astype(np.float32)
 lgb_eval = rmsle(np.expm1(np.asarray(pred_valid)), y_sub_valid)
@@ -513,33 +472,10 @@ del pred_valid
 gc.collect()
 
 
-# # fast predicting
-# LGB_PARAMS2 = {
-#     'learning_rate': 1.1,
-#     'application': 'regression',
-#     'max_depth': 3,
-#     'num_leaves': 100,
-#     'feature_fraction': 0.7,
-#     'colsample_bytree': 0.8,
-#     'verbosity': -1,
-#     'metric': 'RMSE',
-#     'nthread': 4 if kaggle else -1
-# }
-# print('training LightGBM #2 model...')
-# lgbm = run_func(get_lgbm, params=LGB_PARAMS2, train_set=d_train, num_boost_round=8000, valid_sets=watchlist, 
-#                   early_stopping_rounds=50, verbose_eval=100)
-# pred_valid = lgbm.predict(X_valid)
-# pred_lgbm2 = lgbm.predict(X_test).astype(np.float32)
-# lgb_eval = rmsle(np.expm1(np.asarray(pred_valid)), y_sub_valid)
-# print("LightGBM #2 score: {:.6}".format(lgb_eval))
-# del lgbm
-# del pred_valid
-# gc.collect()
-
-
 # ----- blend model -----
 print('blending predictions...')
-weights = {'ridge': 0.08, 'lasso': 0.02, 'lgbm0':0.6, 'lgbm1':0.3}
-subm = weights['ridge']*pred_ridge + weights['lasso']*pred_lasso + weights['lgbm0']*pred_lgbm0 + weights['lgbm1']*pred_lgbm1
-subm = pd.DataFrame({'test_id':id_test.values, 'price':np.expm1(subm)})
+weights = {'ridge': 0.08, 'lasso': 0.02, 'lgbm0': 0.6, 'lgbm1': 0.3}
+subm = weights['ridge']*pred_ridge + weights['lasso']*pred_lasso + \
+       weights['lgbm0']*pred_lgbm0 + weights['lgbm1']*pred_lgbm1
+subm = pd.DataFrame({'test_id': id_test.values, 'price': np.expm1(subm)})
 subm.to_csv("baseline5_2_cutoff_2lgbm.csv", index=False)
