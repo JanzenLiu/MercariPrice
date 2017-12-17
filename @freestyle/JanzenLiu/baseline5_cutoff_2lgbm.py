@@ -31,7 +31,7 @@ def get_duration_str(secs):
 
 
 # Copied from stackoverflow, to declare the specific source later
-# convert bytes to 'xx MB'/'yy GB'/etc.
+# convert bytes to 'xxMB'/'yyGB'/etc.
 def get_size_str(num_bytes, units=None):
     assert num_bytes >= 0, "Negative size is not allowed"
     if not units:
