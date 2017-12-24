@@ -1,6 +1,7 @@
 import pandas as pd
 import pickle
 import os
+from scipy.sparse import hstack
 
 
 def load_file(filepath, **params):
@@ -13,7 +14,6 @@ def load_file(filepath, **params):
     # load according to extension
     ret = None
     ext = os.path.splitext(filepath)[1][1:]
-    print(ext)
     if ext == 'tsv':
         ret = pd.read_table(filepath, **params)
     elif ext == 'csv':
@@ -36,7 +36,7 @@ def save_file(obj, filepath, **params):
     if (not os.path.exists(folder)) or (not os.path.isdir(folder)):
         os.makedirs(folder)
     # save according to extension
-    ext = os.path.splitext(filepat)[1][1:]
+    ext = os.path.splitext(filepath)[1][1:]
     if ext == 'tsv':
         # assume obj is a pandas DataFrame
         # TODO: add type handling to accept type other than pandas DataFrame or reject invalid type
@@ -53,3 +53,14 @@ def save_file(obj, filepath, **params):
     # to be complemented... (json, xgboost model, txt, etc.)
     else:
         print("error: unsupported file format {}".format(ext))
+
+
+def load_data(file_list, param_dict=None, sparse=True):
+    mat = None  # to mute IDE warning
+    for i, filepath in enumerate(file_list):
+        if not param_dict:
+            param_dict = {}
+        params = param_dict.get(filepath, {})
+        new_mat = load_file(filepath, **params)
+        mat = new_mat if i == 0 else hstack((mat, new_mat)).tocsr() if sparse else hstack((mat, new_mat))
+    return mat
