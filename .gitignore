@@ -1,8 +1,9 @@
 ### Files to ignore defined by users
 @freestyle/JanzenLiu/*.ipynb
 @freestyle/JanzenLiu/*/
+playground/
 *.tsv
-*.csv
+# *.csv
 
 # Created by .ignore support plugin (hsz.mobi)
 ### LibreOffice template
