@@ -6,10 +6,10 @@ import json  # to dump python dict
 
 # --- load manually checked replacement schemes ---
 folder = './raw/'
-fname = 'dist_1_v1_janzen.csv'
+fname = 'brand_dist_1_v1_janzen.csv'
 df_d1_v1 = pd.read_csv(os.path.join(folder, fname))
-fname = 'dist_1_v1_glassy.csv'
-df_d1_v2 = pd.read_csv(os.path.join(folder, fname), encoding='ISO-8859-1')
+fname = 'brand_dist_1_v1_glassy.csv'
+df_d1_v2 = pd.read_csv(os.path.join(folder, fname), encoding='ISO-8859-1')  # glassy's can't be opened with utf-8
 
 
 # --- get indices for different and same pairs ---
