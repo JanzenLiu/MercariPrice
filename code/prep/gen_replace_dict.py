@@ -49,6 +49,7 @@ df_test = pd.read_table(os.path.join(folder, fname))
 
 
 # --- helper function to find subset of DataFrame with certain brand ---
+@task("find samples with given brand_name")
 def df_with_brand(df, bname):
     return df[df['brand_name'] == bname]
 
@@ -109,9 +110,11 @@ ws['name'] = ws['name'].map(lambda x: x.replace('.test.tsv', '').replace('@@slas
 bin_no_repl = {}  # to store brands; bin for "brand in name", repl for replaceable
 bin_repl = {}
 bin_empty = {}
+bin_to_determine = {}
 bin_no_repl["A_K"] = ws[ws["replace"] == 0]["name"].tolist()
 bin_repl["A_K"] = ws[ws["replace"] == 1]["name"].tolist()
 bin_empty["A_K"] = ws[ws["replace"] == 2]["name"].tolist()
+bin_to_determine["A_K"] = []
 
 
 # ===== helper class =====
