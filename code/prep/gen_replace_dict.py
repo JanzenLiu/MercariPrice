@@ -74,7 +74,7 @@ with open(os.path.join(folder, fname), 'w') as f:
 
 
 # --- save mislabelled brands list ---
-fname = 'brand_mislabeled_p1..lst'
+fname = 'brand_mislabeled_p1.lst'
 with open(os.path.join(folder, fname), 'w') as f:
     for val in special_brand_list:
         f.write(val + '\n')
@@ -143,8 +143,35 @@ fs.save_list(bin_repl["A_K"], "brand_in_name_repl_A_K")
 fs.save_list(bin_empty["A_K"], "brand_in_name_empty_A_K")
 
 
-special_brand_list2 = []
-special_brand_list2.append("% Pure")
+special_brand_list2 = [
+    "% Pure",
+    "KangaRoos",  # should belongs to "LuLaRoe"
+    "Karl Lagerfeld",  # should belongs to "Chanel" possibly
+    "ULTra",  # only 1 sample, might be mislabelled
+    "Ultra Pro",  # only 3 samples and they looks unrelated
+    "Umbra",  # the missing samples looks unrelated to the labelled samples; but themselves are similar
+    "Unik",  # only one sample; this is a real brand, the missing sample seems unrelated
+    "USAF",  # the missing samples looks unrelated to the labelled samples; but themselves are similar
+    "Vandor",  # the missing samples looks unrelated to the labelled sample
+    # "Vanilla Sugar",  # the missing samples looks unrelated to the labelled samples; but themselves are similar
+    # "Vantage", # the missing samples looks unrelated to the labelled samples; but themselves are similar
+    # "Veet", # the missing samples looks unrelated to the labelled samples; but themselves are similar
+    "Velocity",  # seems like mislabelled
+    "Velvet",  # seems mislabelled
+    "Vilebrequin", # the labelled seems non-sense
+    "Viper",  # seems mislabelled
+    "ViX",  # might be confused with "Matteify vix"
+    "Wanted",  # seems mislabelled
+    "Warrior",  # some missing are related and some are not
+    "Wendy Bellissimo",  # the missing samples looks unrelated to the labelled samples; but themselves are similar
+    "Wet",
+    "Winchester",  # some missing samples are related and some are not
+    "Wish",  # some missing samples are related and some are not
+    "World's Best",  # this label is bullshit
+    "Worth",  # some missing samples are related and some are not
+]
+
+fs.save_list(special_brand_list2, "brand_mislabeled_p2.lst")
 
 
 stemmer = PorterStemmer()  # get NLTK stemmer
