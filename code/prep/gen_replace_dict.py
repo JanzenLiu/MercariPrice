@@ -1,8 +1,8 @@
 # coding: utf-8
-import os
 import pandas as pd
-import numpy as np
+from nltk.stem.porter import PorterStemmer
 import json  # to dump python dict
+from ..utils.perf_utils import *
 
 
 # --- load manually checked replacement schemes for equivalent brand names ---
@@ -142,3 +142,21 @@ fs.save_list(bin_empty["A_K"], "brand_in_name_empty_A_K")
 
 special_brand_list2 = []
 special_brand_list2.append("% Pure")
+
+
+stemmer = PorterStemmer()  # get NLTK stemmer
+
+
+@task("find samples with brand in name")
+def df_with_bin(df, bname, miss=True, strict=False, stem=False):
+    if strict:
+        idx = df[df["name"].map(lambda x: bname.lower() in x.lower().split())].index
+        if stem:
+            df_copy = df.iloc[idx].copy()
+            bname = stemmer.stem(bname.lower())
+            ret = df_copy[df_copy["name"].map(lambda x: bname in [stemmer.stem(w) for w in x.lower().split()])]
+        else:
+            ret = df.iloc[idx]
+    else:
+        ret = df[df["name"].map(lambda x: bname.lower() in x.lower())]
+    return ret[ret["brand_name"].isnull()] if miss else ret
