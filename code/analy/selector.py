@@ -1,5 +1,6 @@
 from ..utils.perf_utils import *
 from nltk.stem.porter import PorterStemmer
+import numpy as np
 
 
 stemmer = PorterStemmer()
@@ -44,3 +45,15 @@ def df_with_brand_in_name(df, val, miss=True, strict=False, stem=False):
     else:
         ret = df[df["name"].map(lambda x: val.lower() in x.lower())]
     return ret[ret["brand_name"].isnull()] if miss else ret
+
+
+def get_brand_list(df):
+    lst = df["brand_name"].unique().tolist()
+    lst.remove(np.nan)
+    return lst
+
+
+def get_item_with_substring(lst, substring, case_sensitive=False, drop_duplicate=False):
+    lst = [val.lower() for val in lst] if case_sensitive else lst
+    lst = [val for val in lst if substring in val]
+    return list(set(lst)) if drop_duplicate else lst
