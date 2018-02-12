@@ -191,16 +191,29 @@ def df_with_bin(df, bname, miss=True, strict=False, stem=False):
         ret = df[df["name"].map(lambda x: bname.lower() in x.lower())]
     return ret[ret["brand_name"].isnull()] if miss else ret
 
+bin_no_repl = {}
+bin_repl = {}
 
+# --- ABCDEFGHI and K(part 1) ---
 folder = './raw/'
 fname = 'brand_in_name_ABCDEFGHIJ_Kp1_final.xlsx'
+kname = "A_Kp1"  # key name
 ws = pd.read_excel(os.path.join(folder, fname), sheetname="results", usecols=["name", "replace"],
                    dtype={"name": str, "replace": np.int8})  # worksheet
 
-bin_no_repl = {}
-bin_repl = {}
-bin_no_repl["A_Kp1"] = ws[ws["replace"]==0]["name"].tolist()
-bin_repl["A_Kp1"] = ws[ws["replace"]==1]["name"].tolist()
-fs.save_list(bin_no_repl["A_Kp1"], "brand_in_name_norepl_A_Kp1_final")
-fs.save_list(bin_repl["A_Kp1"], "brand_in_name_repl_A_Kp1_final")
+bin_no_repl[kname] = ws[ws["replace"] == 0]["name"].tolist()
+bin_repl[kname] = ws[ws["replace"] == 1]["name"].tolist()
+fs.save_list(bin_no_repl[kname], "brand_in_name_norepl_{}_final".format(kname))
+fs.save_list(bin_repl[kname], "brand_in_name_repl_{}_final".format(kname))
 
+# --- K(part 2), L and QRS ---
+folder = './raw/'
+fname = 'brand_in_name_Kp2_LQRS_final.xlsx'
+kname = "Kp1L_Q_S"
+ws = pd.read_excel(os.path.join(folder, fname), sheetname="results", usecols=["name", "replace"],
+                   dtype={"name": str, "replace": np.int8})  # worksheet
+
+bin_no_repl[kname] = ws[ws["replace"] == 0]["name"].tolist()
+bin_repl[kname] = ws[ws["replace"] == 1]["name"].tolist()
+fs.save_list(bin_no_repl[kname], "brand_in_name_norepl_{}_final".format(kname))
+fs.save_list(bin_repl[kname], "brand_in_name_repl_{}_final".format(kname))
