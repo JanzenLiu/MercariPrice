@@ -40,6 +40,11 @@ def get_eval_str(scores):
     return "{:.6}(+/-{:.6})".format(np.mean(scores), np.std(scores))
 
 
+def rmsle(y, y0):
+    assert len(y) == len(y0)
+    return np.sqrt(np.mean(np.power(np.log1p(y) - np.log1p(y0), 2)))
+
+
 def task(task_name):
     def monitor_perf(func):
         def func_wrapper(*args, **kw):
