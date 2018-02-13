@@ -2,7 +2,8 @@
 @freestyle/JanzenLiu/*.ipynb
 @freestyle/JanzenLiu/*/
 playground/
-*.tsv
+data/
+# *.tsv
 # *.csv
 
 # Created by .ignore support plugin (hsz.mobi)
