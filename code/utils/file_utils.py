@@ -41,3 +41,29 @@ class FileSaver:
     def save_pickle(self, obj, fname, **kw):
         path = self._get_path(fname, "pkl")
         pickle.dump(obj, path, **kw)
+
+
+class FileLoader:
+    def __init__(self, folder):
+        self.folder = folder
+
+    def _get_path(self, fname):
+        return os.path.join(self.folder, fname)
+
+    def load_list(self, fname, fast=True):
+        path = self._get_path(fname)
+        try:
+            with open(path, "r") as f:
+                if fast:
+                    return [line.strip() for line in f.readlines()]
+                else:
+                    lines = []
+                    while True:
+                        line = f.readline()
+                        if line:
+                            lines.append(line)
+                        else:
+                            break
+                    return lines
+        except Exception as e:
+            return None
