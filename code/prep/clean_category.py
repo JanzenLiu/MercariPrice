@@ -21,8 +21,9 @@ default_cat_map = {
 
 def clean_category(df, cat_map=None):
     assert isinstance(df, pd.DataFrame)
-
     if cat_map is None or (not isinstance(cat_map, dict)):
         cat_map = default_cat_map
 
     df['category_name'] = df['category_name'].apply(lambda x: cat_map[x] if x in cat_map.keys() else x)
+
+    return df
