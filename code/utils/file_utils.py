@@ -67,3 +67,13 @@ class FileLoader:
                     return lines
         except Exception as e:
             return None
+
+    def load_dict(self, fname, *args, **kw):
+        path = self._get_path(fname)
+        with open(path, "r") as f:
+            obj = json.load(f, *args, **kw)
+        return obj
+
+    def load_csv(self, fname, *args, **kw):
+        path = self._get_path(fname)
+        return pd.read_csv(path, *args, **kw)
