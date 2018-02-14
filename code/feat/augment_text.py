@@ -7,7 +7,7 @@ except SystemError as e:
     from perf_utils import task
 
 
-task("augment text")
+@task("augment text")
 def augment_text(df, col="item_description", add_cols=None, jointer=" "):
     assert isinstance(df, pd.DataFrame)
     assert isinstance(jointer, str)
