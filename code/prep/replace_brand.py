@@ -2,6 +2,13 @@ import pandas as pd
 
 
 def replace_brand_simple(df, dic):
+    """
+    Replace brand with given dictionary
+
+    :param df: pd.DataFrame
+    :param dic: dict
+    :return: pd.DataFrame
+    """
     assert isinstance(df, pd.DataFrame)
     assert isinstance(dic, dict)
 

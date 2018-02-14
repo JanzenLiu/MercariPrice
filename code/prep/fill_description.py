@@ -8,7 +8,14 @@ except SystemError as e:
 
 
 @task("fill description")
-def fill_description(df):
+def fill_description_simple(df, text):
+    """
+    Fill descripiton with given text
+
+    :param df: pd.DataFrame
+    :param text: string
+    :return: pd.DataFrame
+    """
     assert isinstance(df, pd.DataFrame)
 
     df["item_description"].fillna("no description yet", inplace=True)

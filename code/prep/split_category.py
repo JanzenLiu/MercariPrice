@@ -7,6 +7,13 @@ except SystemError as e:
 
 
 def _get_row_category_levels(text, fill_str):
+    """
+    Split a raw category string into 3 levels
+
+    :param text: string
+    :param fill_str: string
+    :return: [string], whose length is 3
+    """
     try:
         lvls = text.split("/")
 
@@ -23,6 +30,13 @@ def _get_row_category_levels(text, fill_str):
 
 @task("split category")
 def split_category(df, fill_str="Category Missing"):
+    """
+    Get Category Level 0, Level 1 and Level 2 features from original raw data
+
+    :param df: pd.DataFrame
+    :param fill_str: string
+    :return: pd.DataFrame
+    """
     df['cat_0'], df['cat_1'], df['cat_2'] = \
         zip(*df['category_name'].apply(lambda x: _get_row_category_levels(x, fill_str)))
     return df
