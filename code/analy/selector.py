@@ -7,6 +7,8 @@ stemmer = PorterStemmer()
 
 
 def df_selector(func):
+    # handle exception in a unified manner
+    # might be extended for unified message output etc.
     def func_wrapper(*args, **kw):
         try:
             return func(args, kw)
@@ -19,11 +21,7 @@ def df_selector(func):
 
 @df_selector
 def df_with_brand(df, val):
-    try:
-        return df[df["brand_name"] == val]
-    except Exception as e:
-        print(e)
-        return None
+    return df[df["brand_name"] == val]
 
 
 @df_selector
